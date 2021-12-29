@@ -1,0 +1,29 @@
+.dockerignore
+Dockerfile*
+.git*
+storage/logs
+
+# this comes from .gitignore
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+/.idea
+/.vscode
+/.vagrant
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+.env
+
+# Ignoring the IDE files
+/.idea*
+
+# Ignoring IDE helper files
+.phpstorm.meta.php
+_ide_helper.php
+
+# Ignore search indexes
+/storage/*.index

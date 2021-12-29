@@ -1,0 +1,3 @@
+# attempt Let's Encrypt renewal once a week
+SHELL=/bin/bash
+0 1 * * wed cd /home/cm/docker/chatmatic_ci && . .env && docker run --rm -t --network chatmatic --name letsencrypt -v $(cd $STORAGE && pwd)/letsencrypt:/etc/letsencrypt certbot/certbot renew && ./exec -T nginx nginx -t && ./exec -T nginx nginx -s reload

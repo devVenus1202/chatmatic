@@ -1,0 +1,10 @@
+files:
+  - /var/log/chatmatic/pipeline/unprocessed.log
+  - /var/log/chatmatic/pipeline/processed.log
+  - /var/log/chatmatic/pipeline/exception.log
+  - /var/log/chatmatic/pipeline/queue/supervisord.log
+  - /var/log/chatmatic/pipeline/queue/broadcast.log
+  - /var/log/chatmatic/pipeline/queue/workers.log
+  - /var/log/chatmatic/websocket_server/websocket_server.log
+  - /var/log/chatmatic/live_chat.log
+pid_file: /var/run/remote_syslog.pid

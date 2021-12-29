@@ -1,0 +1,103 @@
+version: "3.5"
+services:
+  react:
+    build: ../chatmatic_react
+    restart: on-failure
+    networks:
+      - chatmatic
+    environment:
+      LOGSPOUT: ignore
+  laravel:
+    build: ../chatmatic
+    restart: on-failure
+    networks:
+      - chatmatic
+    volumes:
+      - ${STORAGE_DIR:-../storage}/chatmatic-images:/var/www/chatmatic-images
+      - ../chatmatic/:/var/www/html/
+    environment:
+      LOGSPOUT: ignore
+  laravel_horizon:
+    build: ../chatmatic
+    command: "php artisan horizon"
+    restart: on-failure
+    networks:
+      - chatmatic
+    volumes:
+      - ../chatmatic/:/var/www/html/
+    environment:
+      LOGSPOUT: ignore
+  adminer:
+    image: adminer
+    restart: on-failure
+    networks:
+      - chatmatic
+    environment:
+      LOGSPOUT: ignore
+  nginx:
+    image: nginx:alpine
+    restart: on-failure
+    networks:
+      chatmatic:
+        aliases:
+          # some code uses this name for a few internal routes
+          - internal.chatmatic.info
+    ports:
+      - ${HTTP_PORT:-80}:80/tcp
+      - ${HTTPS_PORT:-443}:443/tcp
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ${STORAGE_DIR:-../storage}/letsencrypt:/etc/letsencrypt
+    environment:
+      LOGSPOUT: ignore
+  redis:
+    image: redis:alpine
+    restart: on-failure
+    networks:
+      - chatmatic
+    environment:
+      LOGSPOUT: ignore
+    volumes:
+      - ${STORAGE_DIR:-../storage}/redis:/data/
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-9.6}-alpine
+    command: -c 'search_path=public'
+    networks:
+      - chatmatic
+    ports:
+      - ${POSTGRES_EXPOSE_ADDR:-127.0.0.1}:${POSTGRES_EXPOSE_PORT:-5432}:5432/tcp
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chat2apppg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oz1TgFlo6LL4ZvJg}
+      POSTGRES_DB: ${POSTGRES_DB:-chatmatic}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./postgres/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
+      - ${STORAGE_DIR:-../storage}/postgres:/var/lib/postgresql/data/pgdata/
+  papertrail:
+    image: andyshinn/remote_syslog2
+    command: -c /etc/log_files.yml -d ${PAPERTRAIL_SYSLOG_ADDRESS:?Add PAPERTRAIL_SYSLOG_ADDRESS in .env file.} -p ${PAPERTRAIL_SYSLOG_PORT:?Add PAPERTRAIL_SYSLOG_PORT in .env file.} --tls
+    restart: on-failure
+    hostname: ${PAPERTRAIL_HOSTNAME:?Add PAPERTRAIL_HOSTNAME in .env file.}
+    volumes:
+      - ${STORAGE_DIR:-../storage}/logs/:/var/log/chatmatic
+      - ./papertrail/log_files.yml:/etc/log_files.yml
+  logspout:
+    image: gliderlabs/logspout
+    command: syslog+tls://${PAPERTRAIL_SYSLOG_ADDRESS:?Add PAPERTRAIL_SYSLOG_ADDRESS in .env file.}:${PAPERTRAIL_SYSLOG_PORT:?Add PAPERTRAIL_SYSLOG_PORT in .env file.}
+    restart: always
+    environment:
+      SYSLOG_HOSTNAME: ${PAPERTRAIL_HOSTNAME:?Add PAPERTRAIL_HOSTNAME in .env file.}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - chatmatic
+networks:
+  chatmatic:
+    driver: bridge
+    name: chatmatic
+# Command to renew / create Let's Encrypt certificate
+# Run this from the CI repo dir
+# . .env && docker run --rm -it --network chatmatic --name letsencrypt -v $(cd $STORAGE && pwd)/letsencrypt:/etc/letsencrypt certbot/certbot certonly -d $(read -p "Common name for the certificate: " CN; echo -n $CN) --standalone --register-unsafely-without-email --agree-tos
+# . .env && docker run --rm -it --network chatmatic --name letsencrypt -v $(cd $STORAGE && pwd)/letsencrypt:/etc/letsencrypt certbot/certbot certonly -d staging.chatdeploy.com --standalone --register-unsafely-without-email --agree-tos
+# . .env && docker run --rm -it --network chatmatic --name letsencrypt -v $(cd $STORAGE && pwd)/letsencrypt:/etc/letsencrypt certbot/certbot renew
